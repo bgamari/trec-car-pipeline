@@ -18,6 +18,7 @@ executable trec-car-pipeline
                        Steps
                        Types
                        WikimediaDump
+                       Utils
   other-extensions:    Arrows
   build-depends:       base >=4.11 && <4.12,
                        bytestring,

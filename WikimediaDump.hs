@@ -18,13 +18,15 @@ import FetchUrl
 import Types
 import Utils
 
-fetchDumpStatus :: () ==> DumpStatus
-fetchDumpStatus = proc _ -> do
+newtype WikiId = WikiId String
+newtype DumpDate = DumpDate String
+
+fetchDumpStatus :: (WikiId, DumpDate) ==> DumpStatus
+fetchDumpStatus = proc (WikiId wikiId, DumpDate dumpDate) -> do
+    let statusUrl = "https://dumps.wikimedia.org/"<>wikiId<>"/"<>dumpDate<>"/dumpstatus.json"
     statusFile <- fetchUrl -< statusUrl
     Right x <- readYaml <<< writeByteString -< (statusFile, [relfile|dump-status.json|])
     returnA -< x
-  where
-    statusUrl = "https://dumps.wikimedia.org/enwiki/20180920/dumpstatus.json"
 
 data DumpStatus = DumpStatus { articleFiles :: [JobFile]
                              }
@@ -56,8 +58,8 @@ fetchDumpFile = proc f -> do
     bs <- fetchUrl -< mirrorRoot<>fileUrl f
     writeByteString -< (bs, fileName f)
 
-fetchWikimediaDump :: () ==> [DumpFile]
-fetchWikimediaDump = proc () -> do
-    status <- fetchDumpStatus -< ()
+fetchWikimediaDump :: (WikiId, DumpDate) ==> [DumpFile]
+fetchWikimediaDump = proc wiki -> do
+    status <- fetchDumpStatus -< wiki
     mapA fetchDumpFile -< articleFiles status
     returnA -< [] -- TODO

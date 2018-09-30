@@ -33,11 +33,10 @@ main = do
       Right out ->
         putStrLn $ "SUCCESS: " ++ show out
 
-
-
 mainFlow :: () ==> ()
 mainFlow = proc () -> do
-    dumps <- fetchWikimediaDump -< ()
+    let wiki = (WikiId "lbwiki", DumpDate "20180920")
+    dumps <- fetchWikimediaDump -< wiki
     tools <- trecCarTools -< ()
     allRawPages <- mapA importPages -< zip (repeat tools) dumps
     rawPages <- concatPages -< (tools, allRawPages)
