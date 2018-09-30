@@ -1,0 +1,5 @@
+packages: funflow-nix/
+          funflow/funflow
+          ./
+          
+symlink-bindir: bin

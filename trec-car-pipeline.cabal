@@ -1,0 +1,34 @@
+name:                trec-car-pipeline
+version:             0.1.0.0
+-- synopsis:
+-- description:
+license:             BSD3
+license-file:        LICENSE
+author:              Ben Gamari
+maintainer:          ben@smart-cactus.org
+copyright:           (c) 2018 Ben Gamari
+-- category:
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable trec-car-pipeline
+  main-is:             Main.hs
+  other-modules:       FetchUrl
+                       Glove
+                       Steps
+                       Types
+                       WikimediaDump
+  other-extensions:    Arrows
+  build-depends:       base >=4.11 && <4.12,
+                       bytestring,
+                       unordered-containers,
+                       text,
+                       aeson,
+                       funflow,
+                       funflow-nix,
+                       path,
+                       path-io,
+                       modern-uri,
+                       lens,
+                       wreq
+  default-language:    Haskell2010
