@@ -88,21 +88,23 @@ mainFlow = proc () -> do
     dedupArticles <- deduplicate -< (tools, (duplicateMapping, processedArticles))
     paragraphCorpus <- exportParagraphs -< (tools, dedupArticles)
 
-    {-
     -- 3.1. Drop pages of forbidden categories
-    let todo = undefined
-    filtered <- filterPages todo -< dedupArticles
+    filtered <-
+        (let preds = undefined -- TODO
+         in filterPages preds)
+        -< (tools, dedupArticles)
 
     -- 4. Drop lead, images, long/short sections, articles with <3 sections
-    base <- transformContent (forbiddenHeadings) -< (tools, filtered)
+    base <- transformContent (T.unwords [ "--forbidden " <> heading | heading <- forbiddenHeadings ]) -< (tools, filtered)
 
     -- 5. Train/test split
-    baseTest <- filterPages "(test-set)" -< base
-    baseTrain <- filterPages "(train-set)" -< base
+    baseTest <- filterPages "(test-set)" -< (tools, base)
+    baseTrain <- filterPages "(train-set)" -< (tools, base)
 
     -- 6. Split train into folds
-    baseTrainFolds <- mapA filterFold -< zip (repeat baseTrain) [0..4]
+    baseTrainFolds <- mapA filterFold -< zip (repeat tools) (zip (repeat baseTrain) [0..4])
 
+    {-
     -- 7. Packaging
     readme <- mkReadme -< ()
     license <- mkLicense -< ()

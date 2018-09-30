@@ -33,8 +33,14 @@ filterPages filterPred =
         , ParamText "-o", ParamOut
         , ParamText filterPred ]
 
-filterFold :: Int -> (Tools, PagesFile) ==> PagesFile
-filterFold i = filterPages ("()") -- TOOD
+filterFold :: (Tools, (PagesFile, Int)) ==> PagesFile
+filterFold =
+    invokeTool [relfile|trec-car-filter-pages|] mkArgs >>^ PagesFile
+  where
+    mkArgs (pagesFile, n) =
+        [ paramPages pagesFile
+        , ParamText "-o", ParamOut
+        , ParamText $ "(fold "<>T.pack (show n)<>")" ]
 
 importPages :: (Tools, DumpFile) ==> PagesFile
 importPages =
