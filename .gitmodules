@@ -1,0 +1,6 @@
+[submodule "funflow"]
+	path = funflow
+	url = https://github.com/mpickering/funflow.git
+[submodule "funflow-nix"]
+	path = funflow-nix
+	url = https://github.com/mpickering/funflow-nix.git
