@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -15,24 +16,12 @@ import Control.Funflow.ContentHashable
 import Control.Funflow.External.Nix as Nix
 
 import Types
+import Glove
 
 paramPages :: PagesFile -> ParamField
 paramPages (PagesFile pagesFile) = ParamPath $ IPItem pagesFile
 
 filterPages :: T.Text -> (Tools, PagesFile) ==> PagesFile
-{-
-filterPages filterPred = proc (tools, inputPages) -> do
-    bin <- arr (toolBinary [relfile|trec-car-filter-pages|]) -< tools
-    out <- Nix.nix f -< (bin, inputPages)
-    returnA -< PagesFile out
-  where
-    f :: (Path Abs File, PagesFile) -> NixConfig
-    f (bin, inputPages) =
-        nixConfig "trec-car-filter-pages"
-        [ paramPages inputPages
-        , ParamText "-o", ParamOut
-        , ParamText filterPred ]
--}
 filterPages filterPred =
     invokeTool [relfile|trec-car-filter-pages|] mkArgs >>^ PagesFile
   where
@@ -40,6 +29,9 @@ filterPages filterPred =
         [ paramPages pagesFile
         , ParamText "-o", ParamOut
         , ParamText filterPred ]
+
+filterFold :: Int -> (Tools, PagesFile) ==> PagesFile
+filterFold i = filterPages ("()") -- TOOD
 
 importPages :: (Tools, DumpFile) ==> PagesFile
 importPages =
@@ -65,6 +57,65 @@ fillMetadata args =
          [ ParamText args
          , paramPages pagesFile
          , ParamText "-o", ParamOut ]
+
+transformContent :: T.Text -> (Tools, PagesFile) ==> PagesFile
+transformContent args =
+    invokeTool [relfile|trec-car-transform-content|] mkArgs >>^ PagesFile
+   where
+     mkArgs pagesFile =
+         [ ParamText args
+         , paramPages pagesFile
+         , ParamText "-o", ParamOut ]
+
+doExport :: T.Text -> (Tools, PagesFile) ==> Item
+doExport mode =
+    invokeTool [relfile|trec-car-export|] mkArgs
+  where
+    mkArgs pagesFile =
+        [ ParamText mode, paramPages pagesFile ]
+
+exportOutlines :: (Tools, PagesFile) ==> OutlinesFile
+exportOutlines = doExport "outlines" >>^ OutlinesFile
+
+exportParagraphs :: (Tools, PagesFile) ==> ParagraphsFile
+exportParagraphs = doExport "paragraphs" >>^ ParagraphsFile
+
+newtype DuplicateMapping = DuplicateMapping Item
+                         deriving (ContentHashable IO)
+
+minhashDuplicates :: (Tools, (GloveEmbedding, PagesFile)) ==> DuplicateMapping
+minhashDuplicates =
+    invokeTool [relfile|trec-car-minhash-duplicates|] mkArgs >>^ DuplicateMapping
+   where
+     mkArgs (glove, pages) =
+         [ ParamText "--embeddings", ParamPath $ IPItem $ getGloveEmbedding glove
+         , ParamText "-t", ParamText "0.9"
+         , ParamText "--projections", ParamText "12"
+         , ParamText "--output", ParamOut
+         , ParamText "-c", ParamOut
+         , paramPages pages
+         , ParamText "+RTS -N50 -A64M -s -RTS"
+         ]
+
+deduplicate :: (Tools, (DuplicateMapping, PagesFile)) ==> PagesFile
+deduplicate = proc (tools, (dupMapping, pages)) -> do
+    dupTable <- buildDupTable -< (tools, dupMapping)
+    pages' <- rewriteDuplicates -< (tools, (dupMapping, dupTable, pages))
+    returnA -< PagesFile pages'
+  where
+    buildDupTable = invokeTool [relfile|trec-car-duplicates-rewrite-table|]
+        $ \dupMapping ->
+            [ ParamText "--output", ParamOut
+            , ParamText "-d", paramDupMapping dupMapping
+            ]
+    rewriteDuplicates = invokeTool [relfile|trec-car-rewrite-duplicates|]
+        $ \(dupMapping, dupTable, pages) ->
+            [ ParamText "--output", ParamOut
+            , ParamText "-d", paramDupMapping dupMapping
+            , paramPages pages
+            ]
+
+    paramDupMapping (DuplicateMapping d) = ParamPath $ IPItem d
 
 invokeTool :: ContentHashable IO a
            => Path Rel File -> (a -> [ParamField])

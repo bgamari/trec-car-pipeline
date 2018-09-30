@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -12,20 +13,20 @@ import Control.Funflow.ContentStore as CS
 
 import Data.Maybe
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 
 import FetchUrl
 import Utils
 
-newtype GloveEmbedding = GloveEmbedding (Content File)
+newtype GloveEmbedding = GloveEmbedding { getGloveEmbedding :: Item }
+                       deriving (ContentHashable IO)
 
 fetchGloveEmbedding :: () ==> GloveEmbedding
 fetchGloveEmbedding = proc () -> do
     fixed <- fixEncoding
         <<< fetchUrl -< gloveUrl
     path <- writeByteString -< (fixed, [relfile|glove|])
-    arr GloveEmbedding -< path
+    arr (GloveEmbedding . contentItem) -< path
   where
     gloveUrl = "http://nlp.stanford.edu/data/glove.6B.zip"
 
