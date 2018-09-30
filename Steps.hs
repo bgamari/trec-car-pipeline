@@ -21,6 +21,9 @@ import Glove
 paramPages :: PagesFile -> ParamField
 paramPages (PagesFile pagesFile) = ParamPath $ IPItem pagesFile
 
+paramParagraphs :: ParagraphsFile -> ParamField
+paramParagraphs (ParagraphsFile parasFile) = ParamPath $ IPItem parasFile
+
 filterPages :: T.Text -> (Tools, PagesFile) ==> PagesFile
 filterPages filterPred =
     invokeTool [relfile|trec-car-filter-pages|] mkArgs >>^ PagesFile
@@ -83,17 +86,17 @@ exportParagraphs = doExport "paragraphs" >>^ ParagraphsFile
 newtype DuplicateMapping = DuplicateMapping Item
                          deriving (ContentHashable IO)
 
-minhashDuplicates :: (Tools, (GloveEmbedding, PagesFile)) ==> DuplicateMapping
+minhashDuplicates :: (Tools, (GloveEmbedding, ParagraphsFile)) ==> DuplicateMapping
 minhashDuplicates =
     invokeTool [relfile|trec-car-minhash-duplicates|] mkArgs >>^ DuplicateMapping
    where
-     mkArgs (glove, pages) =
+     mkArgs (glove, paras) =
          [ ParamText "--embeddings", ParamPath $ IPItem $ getGloveEmbedding glove
          , ParamText "-t", ParamText "0.9"
          , ParamText "--projections", ParamText "12"
          , ParamText "--output", ParamOut
          , ParamText "-c", ParamOut
-         , paramPages pages
+         , paramParagraphs paras
          , ParamText "+RTS -N50 -A64M -s -RTS"
          ]
 

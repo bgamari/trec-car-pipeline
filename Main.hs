@@ -83,12 +83,12 @@ mainFlow = proc () -> do
     processedArticles <- transformContent ("--lead --image --shortHeading --longHeading --shortpage" <> T.unwords [ "--forbidden " <> heading | heading <- forbiddenHeadings ]) -< (tools, articles)
     allParagraphs <- exportParagraphs -< (tools, processedArticles)
 
-    {-
     -- 3. Drop duplicate paragraphs
     duplicateMapping <- minhashDuplicates -< (tools, (glove, allParagraphs))
     dedupArticles <- deduplicate -< (tools, (duplicateMapping, processedArticles))
     paragraphCorpus <- exportParagraphs -< (tools, dedupArticles)
 
+    {-
     -- 3.1. Drop pages of forbidden categories
     let todo = undefined
     filtered <- filterPages todo -< dedupArticles
